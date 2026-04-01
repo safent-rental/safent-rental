@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <head>
 
 <meta charset="UTF-8">
@@ -30,8 +29,6 @@ opacity:0.3;
 pointer-events:none;
 }
 
-/* header */
-
 header{
 background:#180030;
 padding:15px 30px;
@@ -53,7 +50,7 @@ margin-left:8px;
 /* layout */
 
 .container{
-max-width:1000px;
+max-width:1100px;
 margin:auto;
 padding:20px;
 }
@@ -68,16 +65,35 @@ display:none;
 display:block;
 }
 
-/* cards */
+/* flashcards */
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+gap:20px;
+}
 
 .card{
 background:#250050;
-padding:20px;
-margin-bottom:15px;
-border-radius:10px;
+border-radius:12px;
+overflow:hidden;
+cursor:pointer;
+transition:0.2s;
 }
 
-/* inputs */
+.card:hover{
+transform:scale(1.03);
+}
+
+.card img{
+width:100%;
+height:160px;
+object-fit:cover;
+}
+
+.cardContent{
+padding:15px;
+}
 
 input,textarea{
 width:100%;
@@ -89,8 +105,6 @@ background:#1b0038;
 color:white;
 }
 
-/* button */
-
 button{
 background:#7b2cff;
 border:none;
@@ -100,14 +114,8 @@ border-radius:8px;
 cursor:pointer;
 }
 
-button:hover{
-background:#a35cff;
-}
-
-/* chat */
-
 .chatBox{
-height:200px;
+height:250px;
 overflow:auto;
 background:#15002d;
 padding:10px;
@@ -133,7 +141,6 @@ border-radius:6px;
 
 <nav>
 
-<button onclick="showSection('home')">Home</button>
 <button onclick="showSection('services')">Servizi</button>
 <button onclick="showSection('publish')">Pubblica</button>
 <button onclick="showSection('chat')">Chat</button>
@@ -145,32 +152,15 @@ border-radius:6px;
 
 <div class="container">
 
-<!-- HOME -->
-
-<div id="home" class="section active">
-
-<div class="card">
-
-<h2>Benvenuto su SafEnt Rental</h2>
-<p>Piattaforma per affittare servizi.</p>
-
-</div>
-
-</div>
-
 <!-- SERVICES -->
 
-<div id="services" class="section">
+<div id="services" class="section active">
 
-<div class="card">
-
-<h3>Servizi</h3>
+<h2>Servizi</h2>
 
 <button onclick="loadServices()">Aggiorna</button>
 
-<div id="servicesList"></div>
-
-</div>
+<div class="grid" id="servicesList"></div>
 
 </div>
 
@@ -178,9 +168,7 @@ border-radius:6px;
 
 <div id="publish" class="section">
 
-<div class="card">
-
-<h3>Pubblica servizio</h3>
+<h2>Pubblica servizio</h2>
 
 <input id="title" placeholder="Titolo">
 
@@ -188,9 +176,11 @@ border-radius:6px;
 
 <input id="price" placeholder="Prezzo">
 
-<button onclick="createService()">Pubblica</button>
+<input id="location" placeholder="Città">
 
-</div>
+<input type="file" id="image">
+
+<button onclick="createService()">Pubblica</button>
 
 </div>
 
@@ -198,17 +188,13 @@ border-radius:6px;
 
 <div id="chat" class="section">
 
-<div class="card">
-
-<h3>Chat</h3>
+<h2>Chat con venditore</h2>
 
 <div class="chatBox" id="chatBox"></div>
 
-<input id="chatInput" placeholder="Messaggio">
+<input id="chatInput">
 
 <button onclick="sendMessage()">Invia</button>
-
-</div>
 
 </div>
 
@@ -216,9 +202,7 @@ border-radius:6px;
 
 <div id="account" class="section">
 
-<div class="card">
-
-<h3>Account</h3>
+<h2>Account</h2>
 
 <input id="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
@@ -232,10 +216,6 @@ border-radius:6px;
 </div>
 
 </div>
-
-</div>
-
-<!-- FIREBASE -->
 
 <script type="module">
 
@@ -254,8 +234,17 @@ getFirestore,
 collection,
 addDoc,
 getDocs,
-onSnapshot
+onSnapshot,
+query,
+where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+
+import {
+getStorage,
+ref,
+uploadBytes,
+getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"
 
 /* CONFIG FIREBASE */
 
@@ -271,12 +260,18 @@ measurementId: "G-3DC7JE7EB3"
 }
 
 const app = initializeApp(firebaseConfig)
+
 const auth = getAuth(app)
+
 const db = getFirestore(app)
+
+const storage = getStorage(app)
+
+let currentChatUser = null
 
 /* MENU */
 
-window.showSection = (id)=>{
+window.showSection=(id)=>{
 
 document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"))
 
@@ -284,77 +279,59 @@ document.getElementById(id).classList.add("active")
 
 }
 
-/* REGISTER */
+/* AUTH */
 
-window.register = async ()=>{
+window.register=async()=>{
 
-const email = document.getElementById("email").value
-const password = document.getElementById("password").value
-
-try{
+const email=emailInput.value
+const password=passwordInput.value
 
 await createUserWithEmailAndPassword(auth,email,password)
-alert("Account creato")
-
-}catch(e){
-
-alert(e.message)
 
 }
 
-}
+window.login=async()=>{
 
-/* LOGIN */
-
-window.login = async ()=>{
-
-const email = document.getElementById("email").value
-const password = document.getElementById("password").value
-
-try{
+const email=emailInput.value
+const password=passwordInput.value
 
 await signInWithEmailAndPassword(auth,email,password)
-alert("Login effettuato")
-
-}catch(e){
-
-alert(e.message)
 
 }
 
-}
-
-/* LOGOUT */
-
-window.logout = ()=>signOut(auth)
-
-/* USER STATUS */
+window.logout=()=>signOut(auth)
 
 onAuthStateChanged(auth,user=>{
 
-if(user){
-document.getElementById("userStatus").innerText="Loggato: "+user.email
-}else{
-document.getElementById("userStatus").innerText="Non loggato"
-}
+userStatus.innerText=user ? "Loggato: "+user.email : "Non loggato"
 
 })
 
 /* CREATE SERVICE */
 
-window.createService = async ()=>{
+window.createService=async()=>{
 
 if(!auth.currentUser){
-alert("Devi fare login")
+alert("Login richiesto")
 return
 }
 
+const file=image.files[0]
+
+const storageRef=ref(storage,"services/"+Date.now()+file.name)
+
+await uploadBytes(storageRef,file)
+
+const imageURL=await getDownloadURL(storageRef)
+
 await addDoc(collection(db,"services"),{
 
-title:document.getElementById("title").value,
-description:document.getElementById("description").value,
-price:document.getElementById("price").value,
-user:auth.currentUser.uid
+title:title.value,
+description:description.value,
+price:price.value,
+location:location.value,
+image:imageURL,
+owner:auth.currentUser.uid
 
 })
 
@@ -364,28 +341,47 @@ alert("Servizio pubblicato")
 
 /* LOAD SERVICES */
 
-window.loadServices = async ()=>{
+window.loadServices=async()=>{
 
-const list = document.getElementById("servicesList")
-list.innerHTML=""
+servicesList.innerHTML=""
 
-const snap = await getDocs(collection(db,"services"))
+const snap=await getDocs(collection(db,"services"))
 
 snap.forEach(doc=>{
 
-const s = doc.data()
+const s=doc.data()
 
-const div=document.createElement("div")
+const card=document.createElement("div")
 
-div.className="card"
+card.className="card"
 
-div.innerHTML=`
-<h4>${s.title}</h4>
-<p>${s.description}</p>
+card.innerHTML=`
+
+<img src="${s.image}">
+
+<div class="cardContent">
+
+<h3>${s.title}</h3>
+
+<p>${s.location}</p>
+
 <p>${s.price} €</p>
+
+</div>
+
 `
 
-list.appendChild(div)
+card.onclick=()=>{
+
+currentChatUser=s.owner
+
+showSection("chat")
+
+loadChat()
+
+}
+
+servicesList.appendChild(card)
 
 })
 
@@ -393,31 +389,13 @@ list.appendChild(div)
 
 /* CHAT */
 
-window.sendMessage = async ()=>{
+function loadChat(){
 
-if(!auth.currentUser) return
+const q=query(collection(db,"messages"),where("to","==",currentChatUser))
 
-const text=document.getElementById("chatInput").value
+onSnapshot(q,snap=>{
 
-await addDoc(collection(db,"messages"),{
-
-text:text,
-user:auth.currentUser.uid,
-time:Date.now()
-
-})
-
-document.getElementById("chatInput").value=""
-
-}
-
-/* CHAT REALTIME */
-
-onSnapshot(collection(db,"messages"),snap=>{
-
-const box=document.getElementById("chatBox")
-
-box.innerHTML=""
+chatBox.innerHTML=""
 
 snap.forEach(doc=>{
 
@@ -429,11 +407,30 @@ div.className="msg"
 
 div.innerText=m.text
 
-box.appendChild(div)
+chatBox.appendChild(div)
 
 })
 
 })
+
+}
+
+window.sendMessage=async()=>{
+
+if(!auth.currentUser)return
+
+await addDoc(collection(db,"messages"),{
+
+text:chatInput.value,
+from:auth.currentUser.uid,
+to:currentChatUser,
+time:Date.now()
+
+})
+
+chatInput.value=""
+
+}
 
 </script>
 
