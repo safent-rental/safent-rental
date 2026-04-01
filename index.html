@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
 
 <meta charset="UTF-8">
@@ -8,8 +9,8 @@
 <style>
 
 body{
-font-family:Arial;
 margin:0;
+font-family:Arial;
 color:white;
 background:radial-gradient(circle at bottom,#1a0033,#000);
 }
@@ -24,14 +25,15 @@ height:100%;
 background-image:
 radial-gradient(white 1px,transparent 1px),
 radial-gradient(white 1px,transparent 1px);
-background-size:100px 100px,200px 200px;
+background-size:120px 120px,200px 200px;
 opacity:0.3;
+pointer-events:none;
 }
 
 /* header */
 
 header{
-background:#1a0033;
+background:#180030;
 padding:15px 30px;
 display:flex;
 justify-content:space-between;
@@ -40,8 +42,8 @@ align-items:center;
 
 .logo{
 font-size:22px;
+color:#cfa8ff;
 font-weight:bold;
-color:#cba6ff;
 }
 
 nav button{
@@ -51,10 +53,12 @@ margin-left:8px;
 /* layout */
 
 .container{
-max-width:1100px;
+max-width:1000px;
 margin:auto;
 padding:20px;
 }
+
+/* sections */
 
 .section{
 display:none;
@@ -64,23 +68,23 @@ display:none;
 display:block;
 }
 
-/* card */
+/* cards */
 
 .card{
-background:#240048;
+background:#250050;
 padding:20px;
 margin-bottom:15px;
 border-radius:10px;
 }
 
-/* input */
+/* inputs */
 
 input,textarea{
 width:100%;
 padding:10px;
 margin:6px 0;
-border-radius:8px;
 border:none;
+border-radius:8px;
 background:#1b0038;
 color:white;
 }
@@ -90,14 +94,14 @@ color:white;
 button{
 background:#7b2cff;
 border:none;
-padding:10px 15px;
 color:white;
+padding:10px 15px;
 border-radius:8px;
 cursor:pointer;
 }
 
 button:hover{
-background:#9a55ff;
+background:#a35cff;
 }
 
 /* chat */
@@ -105,13 +109,13 @@ background:#9a55ff;
 .chatBox{
 height:200px;
 overflow:auto;
-background:#1a0035;
+background:#15002d;
 padding:10px;
 border-radius:8px;
 }
 
 .msg{
-background:#4a00a8;
+background:#5000b0;
 margin:5px 0;
 padding:6px;
 border-radius:6px;
@@ -129,11 +133,11 @@ border-radius:6px;
 
 <nav>
 
-<button onclick="openSection('home')">Home</button>
-<button onclick="openSection('services')">Servizi</button>
-<button onclick="openSection('publish')">Pubblica</button>
-<button onclick="openSection('chat')">Chat</button>
-<button onclick="openSection('account')">Account</button>
+<button onclick="showSection('home')">Home</button>
+<button onclick="showSection('services')">Servizi</button>
+<button onclick="showSection('publish')">Pubblica</button>
+<button onclick="showSection('chat')">Chat</button>
+<button onclick="showSection('account')">Account</button>
 
 </nav>
 
@@ -148,7 +152,7 @@ border-radius:6px;
 <div class="card">
 
 <h2>Benvenuto su SafEnt Rental</h2>
-<p>Piattaforma per noleggiare servizi vicino a te.</p>
+<p>Piattaforma per affittare servizi.</p>
 
 </div>
 
@@ -160,7 +164,7 @@ border-radius:6px;
 
 <div class="card">
 
-<h3>Servizi disponibili</h3>
+<h3>Servizi</h3>
 
 <button onclick="loadServices()">Aggiorna</button>
 
@@ -196,11 +200,11 @@ border-radius:6px;
 
 <div class="card">
 
-<h3>Chat pubblica</h3>
+<h3>Chat</h3>
 
 <div class="chatBox" id="chatBox"></div>
 
-<input id="chatInput">
+<input id="chatInput" placeholder="Messaggio">
 
 <button onclick="sendMessage()">Invia</button>
 
@@ -216,25 +220,22 @@ border-radius:6px;
 
 <h3>Account</h3>
 
-<div id="authUI">
-
 <input id="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
 
 <button onclick="register()">Register</button>
 <button onclick="login()">Login</button>
-
-</div>
-
-<div id="userStatus"></div>
-
 <button onclick="logout()">Logout</button>
 
-</div>
+<p id="userStatus"></p>
 
 </div>
 
 </div>
+
+</div>
+
+<!-- FIREBASE -->
 
 <script type="module">
 
@@ -256,10 +257,9 @@ getDocs,
 onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
 
-/* FIREBASE CONFIG */
+/* CONFIG FIREBASE */
 
 const firebaseConfig = {
-
 apiKey: "AIzaSyCysFp0BlVGQF6jlyJCv5J8e8k1AjXFNQ4",
 authDomain: "safent-rental.firebaseapp.com",
 databaseURL: "https://safent-rental-default-rtdb.europe-west1.firebasedatabase.app",
@@ -270,13 +270,13 @@ appId: "1:739442300132:web:cb5046398e0b4dc87c48f1",
 measurementId: "G-3DC7JE7EB3"
 }
 
-const app=initializeApp(firebaseConfig)
-const auth=getAuth(app)
-const db=getFirestore(app)
+const app = initializeApp(firebaseConfig)
+const auth = getAuth(app)
+const db = getFirestore(app)
 
 /* MENU */
 
-window.openSection=(id)=>{
+window.showSection = (id)=>{
 
 document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"))
 
@@ -286,15 +286,14 @@ document.getElementById(id).classList.add("active")
 
 /* REGISTER */
 
-window.register=async()=>{
+window.register = async ()=>{
 
-const email=document.getElementById("email").value
-const password=document.getElementById("password").value
+const email = document.getElementById("email").value
+const password = document.getElementById("password").value
 
 try{
 
 await createUserWithEmailAndPassword(auth,email,password)
-
 alert("Account creato")
 
 }catch(e){
@@ -307,15 +306,14 @@ alert(e.message)
 
 /* LOGIN */
 
-window.login=async()=>{
+window.login = async ()=>{
 
-const email=document.getElementById("email").value
-const password=document.getElementById("password").value
+const email = document.getElementById("email").value
+const password = document.getElementById("password").value
 
 try{
 
 await signInWithEmailAndPassword(auth,email,password)
-
 alert("Login effettuato")
 
 }catch(e){
@@ -328,40 +326,34 @@ alert(e.message)
 
 /* LOGOUT */
 
-window.logout=()=>signOut(auth)
+window.logout = ()=>signOut(auth)
 
 /* USER STATUS */
 
 onAuthStateChanged(auth,user=>{
 
 if(user){
-
-userStatus.innerHTML="Loggato: "+user.email
-
+document.getElementById("userStatus").innerText="Loggato: "+user.email
 }else{
-
-userStatus.innerHTML="Non loggato"
-
+document.getElementById("userStatus").innerText="Non loggato"
 }
 
 })
 
 /* CREATE SERVICE */
 
-window.createService=async()=>{
+window.createService = async ()=>{
 
 if(!auth.currentUser){
-
 alert("Devi fare login")
 return
-
 }
 
 await addDoc(collection(db,"services"),{
 
-title:title.value,
-description:description.value,
-price:price.value,
+title:document.getElementById("title").value,
+description:document.getElementById("description").value,
+price:document.getElementById("price").value,
 user:auth.currentUser.uid
 
 })
@@ -372,29 +364,28 @@ alert("Servizio pubblicato")
 
 /* LOAD SERVICES */
 
-window.loadServices=async()=>{
+window.loadServices = async ()=>{
 
-servicesList.innerHTML=""
+const list = document.getElementById("servicesList")
+list.innerHTML=""
 
-const snap=await getDocs(collection(db,"services"))
+const snap = await getDocs(collection(db,"services"))
 
 snap.forEach(doc=>{
 
-const s=doc.data()
+const s = doc.data()
 
 const div=document.createElement("div")
 
 div.className="card"
 
 div.innerHTML=`
-
 <h4>${s.title}</h4>
 <p>${s.description}</p>
 <p>${s.price} €</p>
-
 `
 
-servicesList.appendChild(div)
+list.appendChild(div)
 
 })
 
@@ -402,19 +393,21 @@ servicesList.appendChild(div)
 
 /* CHAT */
 
-window.sendMessage=async()=>{
+window.sendMessage = async ()=>{
 
-if(!auth.currentUser)return
+if(!auth.currentUser) return
+
+const text=document.getElementById("chatInput").value
 
 await addDoc(collection(db,"messages"),{
 
-text:chatInput.value,
+text:text,
 user:auth.currentUser.uid,
 time:Date.now()
 
 })
 
-chatInput.value=""
+document.getElementById("chatInput").value=""
 
 }
 
@@ -422,7 +415,9 @@ chatInput.value=""
 
 onSnapshot(collection(db,"messages"),snap=>{
 
-chatBox.innerHTML=""
+const box=document.getElementById("chatBox")
+
+box.innerHTML=""
 
 snap.forEach(doc=>{
 
@@ -434,7 +429,7 @@ div.className="msg"
 
 div.innerText=m.text
 
-chatBox.appendChild(div)
+box.appendChild(div)
 
 })
 
