@@ -6,6 +6,8 @@
 <meta charset="UTF-8">
 <title>SafEnt Rental</title>
 
+<link rel="icon" href="favicon.png">
+
 <style>
 
 body{
@@ -15,7 +17,7 @@ color:white;
 background:radial-gradient(circle at bottom,#1a0033,#000);
 }
 
-/* sfondo stellato */
+/* stelle */
 
 body::before{
 content:"";
@@ -53,8 +55,6 @@ color:#d4b5ff;
 height:35px;
 }
 
-/* menu */
-
 nav button{
 margin-left:10px;
 }
@@ -75,7 +75,7 @@ display:none;
 display:block;
 }
 
-/* flashcards */
+/* servizi */
 
 .grid{
 display:grid;
@@ -159,10 +159,8 @@ border-radius:6px;
 <header>
 
 <div class="logo">
-
 <img src="logo.png">
 SafEnt Rental
-
 </div>
 
 <nav>
@@ -178,7 +176,7 @@ SafEnt Rental
 
 <div class="container">
 
-<!-- SERVICES -->
+<!-- SERVIZI -->
 
 <div id="services" class="section active">
 
@@ -190,7 +188,7 @@ SafEnt Rental
 
 </div>
 
-<!-- PUBLISH -->
+<!-- PUBBLICA -->
 
 <div id="publish" class="section">
 
@@ -218,7 +216,7 @@ SafEnt Rental
 
 <div class="chatBox" id="chatBox"></div>
 
-<input id="chatInput" placeholder="Scrivi messaggio">
+<input id="chatInput" placeholder="Messaggio">
 
 <button onclick="sendMessage()">Invia</button>
 
@@ -263,14 +261,12 @@ getFirestore,
 collection,
 addDoc,
 getDocs,
-query,
-where,
 onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
 
-/* CONFIG FIREBASE */
+/* FIREBASE CONFIG */
 
-const firebaseConfig={
+const firebaseConfig = {
   apiKey: "AIzaSyCysFp0BlVGQF6jlyJCv5J8e8k1AjXFNQ4",
   authDomain: "safent-rental.firebaseapp.com",
   databaseURL: "https://safent-rental-default-rtdb.europe-west1.firebasedatabase.app",
@@ -281,17 +277,17 @@ const firebaseConfig={
   measurementId: "G-3DC7JE7EB3"
 }
 
-const app=initializeApp(firebaseConfig)
+const app = initializeApp(firebaseConfig)
 
-const auth=getAuth(app)
+const auth = getAuth(app)
 
-const db=getFirestore(app)
+const db = getFirestore(app)
 
-let currentChatUser=null
+let currentChatUser = null
 
 /* MENU */
 
-window.showSection=(id)=>{
+window.showSection = (id)=>{
 
 document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"))
 
@@ -301,50 +297,72 @@ document.getElementById(id).classList.add("active")
 
 /* AUTH */
 
-window.register=async()=>{
+window.register = async()=>{
+
+try{
 
 await createUserWithEmailAndPassword(auth,email.value,password.value)
 
+alert("Account creato")
+
+}catch(e){
+
+alert(e.message)
+
 }
 
-window.login=async()=>{
+}
+
+window.login = async()=>{
+
+try{
 
 await signInWithEmailAndPassword(auth,email.value,password.value)
 
+alert("Login effettuato")
+
+}catch(e){
+
+alert(e.message)
+
 }
 
-window.logout=()=>signOut(auth)
+}
+
+window.logout = ()=>signOut(auth)
 
 onAuthStateChanged(auth,user=>{
 
-userStatus.innerText=user ? "Loggato: "+user.email : "Non loggato"
+userStatus.innerText = user ? "Loggato: "+user.email : "Non loggato"
 
 })
 
 /* PUBBLICA SERVIZIO */
 
-window.createService=async()=>{
+window.createService = async()=>{
 
 if(!auth.currentUser){
-alert("Login richiesto")
+alert("Devi fare login")
 return
 }
 
-const file=image.files[0]
+const file = image.files[0]
 
 if(!file){
 alert("Inserisci immagine")
 return
 }
 
-if(file.size>1000000){
-alert("immagine troppo grande")
+if(file.size > 1000000){
+alert("Immagine troppo grande")
 return
 }
 
-const reader=new FileReader()
+const reader = new FileReader()
 
-reader.onload=async function(){
+reader.readAsDataURL(file)
+
+reader.onload = async()=>{
 
 await addDoc(collection(db,"services"),{
 
@@ -359,29 +377,29 @@ owner:auth.currentUser.uid
 
 alert("Servizio pubblicato")
 
-}
-
-reader.readAsDataURL(file)
+loadServices()
 
 }
 
-/* LOAD SERVICES */
+}
 
-window.loadServices=async()=>{
+/* CARICA SERVIZI */
+
+window.loadServices = async()=>{
 
 servicesList.innerHTML=""
 
-const snap=await getDocs(collection(db,"services"))
+const snap = await getDocs(collection(db,"services"))
 
 snap.forEach(doc=>{
 
-const s=doc.data()
+const s = doc.data()
 
-const card=document.createElement("div")
+const card = document.createElement("div")
 
 card.className="card"
 
-card.innerHTML=`
+card.innerHTML = `
 
 <img src="${s.image}">
 
@@ -397,9 +415,9 @@ card.innerHTML=`
 
 `
 
-card.onclick=()=>{
+card.onclick = ()=>{
 
-currentChatUser=s.owner
+currentChatUser = s.owner
 
 showSection("chat")
 
@@ -417,23 +435,28 @@ servicesList.appendChild(card)
 
 function loadChat(){
 
-const q=query(collection(db,"messages"),where("to","==",currentChatUser))
-
-onSnapshot(q,snap=>{
+onSnapshot(collection(db,"messages"), snap=>{
 
 chatBox.innerHTML=""
 
 snap.forEach(doc=>{
 
-const m=doc.data()
+const m = doc.data()
 
-const div=document.createElement("div")
+if(
+(m.from === auth.currentUser.uid && m.to === currentChatUser) ||
+(m.from === currentChatUser && m.to === auth.currentUser.uid)
+){
+
+const div = document.createElement("div")
 
 div.className="msg"
 
-div.innerText=m.text
+div.innerText = m.text
 
 chatBox.appendChild(div)
+
+}
 
 })
 
@@ -441,13 +464,17 @@ chatBox.appendChild(div)
 
 }
 
-window.sendMessage=async()=>{
+window.sendMessage = async()=>{
 
 if(!auth.currentUser)return
 
+const text = chatInput.value
+
+if(text==="") return
+
 await addDoc(collection(db,"messages"),{
 
-text:chatInput.value,
+text:text,
 from:auth.currentUser.uid,
 to:currentChatUser,
 time:Date.now()
