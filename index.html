@@ -5,7 +5,6 @@
 
 <meta charset="UTF-8">
 <title>SafEnt Rental</title>
-
 <link rel="icon" href="favicon.png">
 
 <style>
@@ -16,8 +15,6 @@ font-family:Arial;
 color:white;
 background:radial-gradient(circle at bottom,#1a0033,#000);
 }
-
-/* stelle */
 
 body::before{
 content:"";
@@ -32,8 +29,6 @@ opacity:0.35;
 pointer-events:none;
 }
 
-/* header */
-
 header{
 background:#180030;
 padding:15px 30px;
@@ -47,7 +42,6 @@ display:flex;
 align-items:center;
 gap:10px;
 font-size:20px;
-font-weight:bold;
 color:#d4b5ff;
 }
 
@@ -58,8 +52,6 @@ height:35px;
 nav button{
 margin-left:10px;
 }
-
-/* layout */
 
 .container{
 max-width:1100px;
@@ -75,8 +67,6 @@ display:none;
 display:block;
 }
 
-/* servizi */
-
 .grid{
 display:grid;
 grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
@@ -88,11 +78,6 @@ background:#240048;
 border-radius:12px;
 overflow:hidden;
 cursor:pointer;
-transition:0.2s;
-}
-
-.card:hover{
-transform:scale(1.05);
 }
 
 .card img{
@@ -105,8 +90,6 @@ object-fit:cover;
 padding:15px;
 }
 
-/* form */
-
 input,textarea{
 width:100%;
 padding:10px;
@@ -117,8 +100,6 @@ background:#1b0038;
 color:white;
 }
 
-/* button */
-
 button{
 background:#7a2cff;
 border:none;
@@ -127,12 +108,6 @@ border-radius:8px;
 color:white;
 cursor:pointer;
 }
-
-button:hover{
-background:#9b59ff;
-}
-
-/* chat */
 
 .chatBox{
 height:260px;
@@ -216,7 +191,7 @@ SafEnt Rental
 
 <div class="chatBox" id="chatBox"></div>
 
-<input id="chatInput" placeholder="Messaggio">
+<input id="chatInput">
 
 <button onclick="sendMessage()">Invia</button>
 
@@ -264,7 +239,7 @@ getDocs,
 onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
 
-/* FIREBASE CONFIG */
+/* CONFIG FIREBASE */
 
 const firebaseConfig = {
   apiKey: "AIzaSyCysFp0BlVGQF6jlyJCv5J8e8k1AjXFNQ4",
@@ -295,39 +270,40 @@ document.getElementById(id).classList.add("active")
 
 }
 
-/* AUTH */
+/* REGISTER */
 
 window.register = async()=>{
 
-try{
+const email = document.getElementById("email").value
+const password = document.getElementById("password").value
 
-await createUserWithEmailAndPassword(auth,email.value,password.value)
+const userCredential = await createUserWithEmailAndPassword(auth,email,password)
+
+await addDoc(collection(db,"users"),{
+
+uid:userCredential.user.uid,
+email:email
+
+})
 
 alert("Account creato")
 
-}catch(e){
-
-alert(e.message)
-
 }
 
-}
+/* LOGIN */
 
 window.login = async()=>{
 
-try{
+const email = document.getElementById("email").value
+const password = document.getElementById("password").value
 
-await signInWithEmailAndPassword(auth,email.value,password.value)
+await signInWithEmailAndPassword(auth,email,password)
 
 alert("Login effettuato")
 
-}catch(e){
-
-alert(e.message)
-
 }
 
-}
+/* LOGOUT */
 
 window.logout = ()=>signOut(auth)
 
@@ -346,30 +322,23 @@ alert("Devi fare login")
 return
 }
 
-const file = image.files[0]
+const file = document.getElementById("image").files[0]
 
 if(!file){
 alert("Inserisci immagine")
 return
 }
 
-if(file.size > 1000000){
-alert("Immagine troppo grande")
-return
-}
-
 const reader = new FileReader()
 
-reader.readAsDataURL(file)
-
-reader.onload = async()=>{
+reader.onload = async ()=>{
 
 await addDoc(collection(db,"services"),{
 
-title:title.value,
-description:description.value,
-price:price.value,
-location:location.value,
+title:document.getElementById("title").value,
+description:document.getElementById("description").value,
+price:document.getElementById("price").value,
+location:document.getElementById("location").value,
 image:reader.result,
 owner:auth.currentUser.uid
 
@@ -381,9 +350,11 @@ loadServices()
 
 }
 
+reader.readAsDataURL(file)
+
 }
 
-/* CARICA SERVIZI */
+/* LOAD SERVICES */
 
 window.loadServices = async()=>{
 
@@ -400,19 +371,12 @@ const card = document.createElement("div")
 card.className="card"
 
 card.innerHTML = `
-
 <img src="${s.image}">
-
 <div class="cardContent">
-
 <h3>${s.title}</h3>
-
 <p>${s.location}</p>
-
 <p>${s.price} €</p>
-
 </div>
-
 `
 
 card.onclick = ()=>{
@@ -420,8 +384,6 @@ card.onclick = ()=>{
 currentChatUser = s.owner
 
 showSection("chat")
-
-loadChat()
 
 }
 
@@ -431,9 +393,7 @@ servicesList.appendChild(card)
 
 }
 
-/* CHAT */
-
-function loadChat(){
+/* CHAT REALTIME */
 
 onSnapshot(collection(db,"messages"), snap=>{
 
@@ -443,11 +403,6 @@ snap.forEach(doc=>{
 
 const m = doc.data()
 
-if(
-(m.from === auth.currentUser.uid && m.to === currentChatUser) ||
-(m.from === currentChatUser && m.to === auth.currentUser.uid)
-){
-
 const div = document.createElement("div")
 
 div.className="msg"
@@ -456,19 +411,17 @@ div.innerText = m.text
 
 chatBox.appendChild(div)
 
-}
-
 })
 
 })
 
-}
+/* INVIA MESSAGGIO */
 
 window.sendMessage = async()=>{
 
-if(!auth.currentUser)return
+if(!auth.currentUser) return
 
-const text = chatInput.value
+const text = document.getElementById("chatInput").value
 
 if(text==="") return
 
