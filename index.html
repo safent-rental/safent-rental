@@ -5,7 +5,6 @@
 
 <meta charset="UTF-8">
 <title>SafEnt Rental</title>
-<link rel="icon" href="favicon.png">
 
 <style>
 
@@ -38,15 +37,9 @@ align-items:center;
 }
 
 .logo{
-display:flex;
-align-items:center;
-gap:10px;
 font-size:20px;
 color:#d4b5ff;
-}
-
-.logo img{
-height:35px;
+font-weight:bold;
 }
 
 nav button{
@@ -110,12 +103,11 @@ cursor:pointer;
 }
 
 .chatBox{
-height:260px;
+height:250px;
 overflow:auto;
 background:#120028;
 padding:10px;
 border-radius:8px;
-margin-bottom:10px;
 }
 
 .msg{
@@ -133,16 +125,13 @@ border-radius:6px;
 
 <header>
 
-<div class="logo">
-<img src="logo.png">
-SafEnt Rental
-</div>
+<div class="logo">SafEnt Rental</div>
 
 <nav>
 
 <button onclick="showSection('services')">Servizi</button>
 <button onclick="showSection('publish')">Pubblica</button>
-<button onclick="showSection('chat')">Chat</button>
+<button onclick="showSection('favorites')">Preferiti</button>
 <button onclick="showSection('account')">Account</button>
 
 </nav>
@@ -151,43 +140,51 @@ SafEnt Rental
 
 <div class="container">
 
-<!-- SERVIZI -->
+<!-- SEARCH -->
+
+<input id="search" placeholder="Cerca servizi..." onkeyup="searchServices()">
+
+<!-- SERVICES -->
 
 <div id="services" class="section active">
-
-<h2>Servizi disponibili</h2>
-
-<button onclick="loadServices()">Aggiorna</button>
 
 <div class="grid" id="servicesList"></div>
 
 </div>
 
-<!-- PUBBLICA -->
+<!-- PUBLISH -->
 
 <div id="publish" class="section">
 
 <h2>Pubblica servizio</h2>
 
 <input id="title" placeholder="Titolo">
-
 <textarea id="description" placeholder="Descrizione"></textarea>
-
 <input id="price" placeholder="Prezzo">
-
 <input id="location" placeholder="Città">
-
 <input type="file" id="image">
 
 <button onclick="createService()">Pubblica</button>
 
 </div>
 
-<!-- CHAT -->
+<!-- SERVICE DETAIL -->
 
-<div id="chat" class="section">
+<div id="serviceDetail" class="section">
 
-<h2>Chat</h2>
+<h2 id="serviceTitle"></h2>
+
+<img id="serviceImage" width="300">
+
+<p id="serviceDesc"></p>
+
+<p id="servicePrice"></p>
+
+<button onclick="addFavorite()">❤️ Preferito</button>
+
+<button onclick="bookService()">📅 Prenota</button>
+
+<h3>Chat venditore</h3>
 
 <div class="chatBox" id="chatBox"></div>
 
@@ -195,13 +192,29 @@ SafEnt Rental
 
 <button onclick="sendMessage()">Invia</button>
 
+<h3>Recensioni</h3>
+
+<div id="reviews"></div>
+
+<textarea id="reviewText"></textarea>
+
+<button onclick="sendReview()">Lascia recensione</button>
+
+</div>
+
+<!-- FAVORITES -->
+
+<div id="favorites" class="section">
+
+<h2>Preferiti</h2>
+
+<div id="favoritesList"></div>
+
 </div>
 
 <!-- ACCOUNT -->
 
 <div id="account" class="section">
-
-<h2>Account</h2>
 
 <input id="email" placeholder="Email">
 
@@ -223,25 +236,17 @@ SafEnt Rental
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"
 
-import {
-getAuth,
-createUserWithEmailAndPassword,
-signInWithEmailAndPassword,
-signOut,
-onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"
+import { getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged }
 
-import {
-getFirestore,
-collection,
-addDoc,
-getDocs,
-onSnapshot
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"
 
-/* CONFIG FIREBASE */
+import { getFirestore,collection,addDoc,getDocs,onSnapshot }
 
-const firebaseConfig = {
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+
+/* FIREBASE CONFIG */
+
+const firebaseConfig={
   apiKey: "AIzaSyCysFp0BlVGQF6jlyJCv5J8e8k1AjXFNQ4",
   authDomain: "safent-rental.firebaseapp.com",
   databaseURL: "https://safent-rental-default-rtdb.europe-west1.firebasedatabase.app",
@@ -252,17 +257,19 @@ const firebaseConfig = {
   measurementId: "G-3DC7JE7EB3"
 }
 
-const app = initializeApp(firebaseConfig)
+const app=initializeApp(firebaseConfig)
 
-const auth = getAuth(app)
+const auth=getAuth(app)
 
-const db = getFirestore(app)
+const db=getFirestore(app)
 
-let currentChatUser = null
+let currentService=null
+
+let servicesCache=[]
 
 /* MENU */
 
-window.showSection = (id)=>{
+window.showSection=(id)=>{
 
 document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"))
 
@@ -270,81 +277,59 @@ document.getElementById(id).classList.add("active")
 
 }
 
-/* REGISTER */
+/* AUTH */
 
-window.register = async()=>{
+window.register=async()=>{
 
-const email = document.getElementById("email").value
-const password = document.getElementById("password").value
+const email=email.value
 
-const userCredential = await createUserWithEmailAndPassword(auth,email,password)
+const password=password.value
+
+const cred=await createUserWithEmailAndPassword(auth,email,password)
 
 await addDoc(collection(db,"users"),{
 
-uid:userCredential.user.uid,
+uid:cred.user.uid,
 email:email
 
 })
 
-alert("Account creato")
+}
+
+window.login=async()=>{
+
+await signInWithEmailAndPassword(auth,email.value,password.value)
 
 }
 
-/* LOGIN */
-
-window.login = async()=>{
-
-const email = document.getElementById("email").value
-const password = document.getElementById("password").value
-
-await signInWithEmailAndPassword(auth,email,password)
-
-alert("Login effettuato")
-
-}
-
-/* LOGOUT */
-
-window.logout = ()=>signOut(auth)
+window.logout=()=>signOut(auth)
 
 onAuthStateChanged(auth,user=>{
 
-userStatus.innerText = user ? "Loggato: "+user.email : "Non loggato"
+userStatus.innerText=user ? "Loggato: "+user.email : "Non loggato"
 
 })
 
-/* PUBBLICA SERVIZIO */
+/* CREATE SERVICE */
 
-window.createService = async()=>{
+window.createService=()=>{
 
-if(!auth.currentUser){
-alert("Devi fare login")
-return
-}
+const file=image.files[0]
 
-const file = document.getElementById("image").files[0]
+const reader=new FileReader()
 
-if(!file){
-alert("Inserisci immagine")
-return
-}
-
-const reader = new FileReader()
-
-reader.onload = async ()=>{
+reader.onload=async()=>{
 
 await addDoc(collection(db,"services"),{
 
-title:document.getElementById("title").value,
-description:document.getElementById("description").value,
-price:document.getElementById("price").value,
-location:document.getElementById("location").value,
+title:title.value,
+description:description.value,
+price:price.value,
+location:location.value,
 image:reader.result,
 owner:auth.currentUser.uid
 
 })
-
-alert("Servizio pubblicato")
 
 loadServices()
 
@@ -356,87 +341,210 @@ reader.readAsDataURL(file)
 
 /* LOAD SERVICES */
 
-window.loadServices = async()=>{
+async function loadServices(){
 
 servicesList.innerHTML=""
 
-const snap = await getDocs(collection(db,"services"))
+const snap=await getDocs(collection(db,"services"))
+
+servicesCache=[]
 
 snap.forEach(doc=>{
 
-const s = doc.data()
+const s=doc.data()
 
-const card = document.createElement("div")
+s.id=doc.id
+
+servicesCache.push(s)
+
+createCard(s)
+
+})
+
+}
+
+function createCard(s){
+
+const card=document.createElement("div")
 
 card.className="card"
 
-card.innerHTML = `
+card.innerHTML=`
+
 <img src="${s.image}">
+
 <div class="cardContent">
+
 <h3>${s.title}</h3>
+
 <p>${s.location}</p>
+
 <p>${s.price} €</p>
+
 </div>
+
 `
 
-card.onclick = ()=>{
-
-currentChatUser = s.owner
-
-showSection("chat")
-
-}
+card.onclick=()=>openService(s)
 
 servicesList.appendChild(card)
 
+}
+
+/* OPEN SERVICE */
+
+function openService(s){
+
+currentService=s
+
+serviceTitle.innerText=s.title
+
+serviceImage.src=s.image
+
+serviceDesc.innerText=s.description
+
+servicePrice.innerText=s.price+" €"
+
+showSection("serviceDetail")
+
+loadReviews()
+
+}
+
+/* SEARCH */
+
+window.searchServices=()=>{
+
+const q=search.value.toLowerCase()
+
+servicesList.innerHTML=""
+
+servicesCache.forEach(s=>{
+
+if(s.title.toLowerCase().includes(q)){
+
+createCard(s)
+
+}
+
 })
 
 }
 
-/* CHAT REALTIME */
+/* FAVORITES */
 
-onSnapshot(collection(db,"messages"), snap=>{
+window.addFavorite=async()=>{
 
-chatBox.innerHTML=""
+await addDoc(collection(db,"favorites"),{
+
+service:currentService.id,
+user:auth.currentUser.uid
+
+})
+
+alert("Aggiunto ai preferiti")
+
+}
+
+/* BOOKINGS */
+
+window.bookService=async()=>{
+
+await addDoc(collection(db,"bookings"),{
+
+service:currentService.id,
+user:auth.currentUser.uid,
+time:Date.now()
+
+})
+
+alert("Prenotazione inviata")
+
+}
+
+/* REVIEWS */
+
+window.sendReview=async()=>{
+
+await addDoc(collection(db,"reviews"),{
+
+service:currentService.id,
+text:reviewText.value,
+user:auth.currentUser.uid
+
+})
+
+reviewText.value=""
+
+loadReviews()
+
+}
+
+async function loadReviews(){
+
+reviews.innerHTML=""
+
+const snap=await getDocs(collection(db,"reviews"))
 
 snap.forEach(doc=>{
 
-const m = doc.data()
+const r=doc.data()
 
-const div = document.createElement("div")
+if(r.service===currentService.id){
 
-div.className="msg"
+const div=document.createElement("div")
 
-div.innerText = m.text
+div.innerText=r.text
 
-chatBox.appendChild(div)
+reviews.appendChild(div)
+
+}
 
 })
 
-})
+}
 
-/* INVIA MESSAGGIO */
+/* CHAT */
 
-window.sendMessage = async()=>{
-
-if(!auth.currentUser) return
-
-const text = document.getElementById("chatInput").value
-
-if(text==="") return
+window.sendMessage=async()=>{
 
 await addDoc(collection(db,"messages"),{
 
-text:text,
-from:auth.currentUser.uid,
-to:currentChatUser,
-time:Date.now()
+text:chatInput.value,
+service:currentService.id,
+user:auth.currentUser.uid
 
 })
 
 chatInput.value=""
 
 }
+
+onSnapshot(collection(db,"messages"),snap=>{
+
+chatBox.innerHTML=""
+
+snap.forEach(doc=>{
+
+const m=doc.data()
+
+if(currentService && m.service===currentService.id){
+
+const div=document.createElement("div")
+
+div.className="msg"
+
+div.innerText=m.text
+
+chatBox.appendChild(div)
+
+}
+
+})
+
+})
+
+loadServices()
 
 </script>
 
